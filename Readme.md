@@ -6,8 +6,8 @@
 
 [![Release](https://img.shields.io/github/v/release/panko200/SAM3CutoutPlugin)](https://github.com/panko200/SAM3CutoutPlugin)
 [![Downloads](https://img.shields.io/github/downloads/panko200/SAM3CutoutPlugin/total)](https://github.com/panko200/SAM3CutoutPlugin/releases/latest)
-[![License](https://img.shields.io/github/license/panko200/SAM3CutoutPlugin)](https://github.com/panko200/SAM3CutoutPlugin/blob/main/LICENSE)
-[![Last Commit](https://img.shields.io/github/last-commit/panko200/SAM3CutoutPlugin)](https://github.com/panko200/SAM3CutoutPlugin/commits/main)
+[![License](https://img.shields.io/github/license/panko200/SAM3CutoutPlugin)](https://github.com/panko200/SAM3CutoutPlugin/blob/master/LICENSE)
+[![Last Commit](https://img.shields.io/github/last-commit/panko200/SAM3CutoutPlugin)](https://github.com/panko200/SAM3CutoutPlugin/commits/master)
 
 SAM3 被写体切り抜きプラグイン (SAM3CutoutPlugin)  
 製作者：panko200  
