@@ -1,0 +1,169 @@
+<UserControl x:Class="SAM3CutoutPlugin.SAM3CutoutView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:SAM3CutoutPlugin">
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVisConverter"/>
+    </UserControl.Resources>
+    <Grid Margin="8">
+        <Grid.RowDefinitions>
+            <!-- 上段: 設定UI -->
+            <RowDefinition Height="*"/>
+            <!-- 下段: 実行ボタン -->
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- ========== 上段: 設定UI ========== -->
+        <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto">
+            <StackPanel>
+
+                <!-- ===== 入力ソース ===== -->
+                <TextBlock Text="■ 入力ソース" FontWeight="Bold" FontSize="13" Margin="0,0,0,6"/>
+
+                <RadioButton Content="選択中のアイテムから取得"
+                             IsChecked="{Binding UseSelectedItem}"
+                             Margin="4,2"/>
+                <RadioButton Content="ファイルを指定"
+                             IsChecked="{Binding UseFilePath}"
+                             Margin="4,2,4,4"/>
+
+                <!-- ファイルパス指定 -->
+                <Grid Margin="20,2,0,8">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBox Grid.Column="0"
+                             Text="{Binding InputFilePath, UpdateSourceTrigger=PropertyChanged}"
+                             IsEnabled="{Binding UseFilePath}"
+                             VerticalContentAlignment="Center"
+                             Padding="4,3"/>
+                    <Button Grid.Column="1"
+                            Content="参照..."
+                            Command="{Binding BrowseInputCommand}"
+                            IsEnabled="{Binding UseFilePath}"
+                            Padding="8,3"
+                            Margin="4,0,0,0"/>
+                </Grid>
+
+                <!-- ===== 処理タイプ ===== -->
+                <TextBlock Text="■ 処理タイプ" FontWeight="Bold" FontSize="13" Margin="0,4,0,6"/>
+
+                <StackPanel Orientation="Horizontal" Margin="4,0,0,8">
+                    <RadioButton Content="画像（静止画）"
+                                 IsChecked="{Binding IsImageMode}"
+                                 Margin="0,0,16,0"/>
+                    <RadioButton Content="映像"
+                                 IsChecked="{Binding IsVideoMode}"/>
+                </StackPanel>
+
+                <!-- ===== 推論デバイス ===== -->
+                <TextBlock Text="■ 推論デバイス" FontWeight="Bold" FontSize="13" Margin="0,4,0,4"/>
+                <TextBlock Text="CUDA GPUでデコーダーおよびトラッカーを高速化できます。NVIDIA製GPU搭載のPCで推奨されます。その他の場合はCPUを選択してください。"
+                           Foreground="Gray" FontSize="11" TextWrapping="Wrap" Margin="4,0,0,4"/>
+                <ComboBox SelectedIndex="{Binding DeviceIndex}"
+                          Margin="4,0,4,8" Padding="4,3">
+                    <ComboBoxItem Content="CUDA GPU（高速・NVIDIA製GPU）"/>
+                    <ComboBoxItem Content="CPU（安定・低速）"/>
+                </ComboBox>
+
+                <!-- ===== 動画出力形式 (映像モード時に表示) ===== -->
+                <TextBlock Text="■ 動画出力形式" FontWeight="Bold" FontSize="13" Margin="0,4,0,4"
+                           Visibility="{Binding IsVideoMode, Converter={StaticResource BoolToVisConverter}}"/>
+                <ComboBox SelectedValue="{Binding OutputFormat, Mode=TwoWay}" 
+                          SelectedValuePath="Tag" 
+                          Margin="4,0,4,4" Padding="4,3"
+                          Visibility="{Binding IsVideoMode, Converter={StaticResource BoolToVisConverter}}">
+                    <ComboBoxItem Content="グリーンバックMP4 (YMM4のクロマキー等で透過)" Tag="{x:Static local:OutputFormat.GreenScreenMP4}" />
+                    <ComboBoxItem Content="白黒マスクMP4 (YMM4の「上のアイテムでクリッピング」等で透過)" Tag="{x:Static local:OutputFormat.MaskMP4}" />
+                    <ComboBoxItem Content="自動でマスクして透過動画 (1レイヤーで自動切り抜き)" Tag="{x:Static local:OutputFormat.AutoMaskMP4}" />
+                </ComboBox>
+                <TextBlock Text="※自動でマスクして透過動画では、元の動画アイテムに透過用のマスクエフェクトが自動で適用されます。" 
+                           Foreground="Gray" FontSize="11" TextWrapping="Wrap" Margin="4,0,4,8"
+                           Visibility="{Binding IsVideoMode, Converter={StaticResource BoolToVisConverter}}"/>
+
+                <!-- ===== 静止画出力形式 (画像モード時に表示) (追加) ===== -->
+                <TextBlock Text="■ 静止画出力形式" FontWeight="Bold" FontSize="13" Margin="0,4,0,4"
+                           Visibility="{Binding IsImageMode, Converter={StaticResource BoolToVisConverter}}"/>
+                <ComboBox SelectedValue="{Binding ImageOutputFormat, Mode=TwoWay}" 
+                          SelectedValuePath="Tag" 
+                          Margin="4,0,4,4" Padding="4,3"
+                           Visibility="{Binding IsImageMode, Converter={StaticResource BoolToVisConverter}}">
+                    <ComboBoxItem Content="透過PNG (アルファチャンネル付き画像)" Tag="{x:Static local:ImageOutputFormat.TransparentPNG}" />
+                    <ComboBoxItem Content="白黒マスクPNG (クリッピングなどで使用)" Tag="{x:Static local:ImageOutputFormat.MaskPNG}" />
+                    <ComboBoxItem Content="自動でマスクして透過画像 (1レイヤーで自動切り抜き)" Tag="{x:Static local:ImageOutputFormat.AutoMaskPNG}" />
+                </ComboBox>
+                <TextBlock Text="※自動でマスクして透過画像では、元の画像アイテムに「SAM3画像マスク」エフェクトが自動で適用されるため、JPG形式などの透過非対応の静止画でも背景を透過して表示可能です。" 
+                           Foreground="Gray" FontSize="11" TextWrapping="Wrap" Margin="4,0,4,8"
+                           Visibility="{Binding IsImageMode, Converter={StaticResource BoolToVisConverter}}"/>
+
+                <!-- ===== 出力先 ===== -->
+                <TextBlock Text="■ 出力先フォルダ（任意）" FontWeight="Bold" FontSize="13" Margin="0,4,0,4"/>
+                <TextBlock Text="空欄なら入力ファイルと同じフォルダに出力します。"
+                           Foreground="Gray" FontSize="11" Margin="4,0,0,4"/>
+                <Grid Margin="4,0,4,8">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBox Grid.Column="0"
+                             Text="{Binding OutputFolder, UpdateSourceTrigger=PropertyChanged}"
+                             VerticalContentAlignment="Center"
+                             Padding="4,3"/>
+                    <Button Grid.Column="1"
+                            Content="参照..."
+                            Command="{Binding BrowseOutputCommand}"
+                            Padding="8,3"
+                            Margin="4,0,0,0"/>
+                </Grid>
+
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- ========== 下段: 実行ボタン + ステータス ========== -->
+        <Border Grid.Row="1" BorderBrush="Gray" BorderThickness="0,1,0,0" Padding="0,10,0,0">
+            <StackPanel>
+
+                <!-- プログレスバー -->
+                <ProgressBar Value="{Binding ProgressValue, Mode=OneWay}"
+                             Minimum="0" Maximum="1"
+                             Height="8" Margin="0,0,0,8"
+                             Visibility="{Binding IsProcessing, Converter={StaticResource BoolToVisConverter}}"/>
+
+                <!-- 実行/キャンセルボタン -->
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <Button Grid.Column="0"
+                            Content="▶ 被写体を切り抜く"
+                            Command="{Binding ExecuteCommand}"
+                            IsEnabled="{Binding IsNotProcessing}"
+                            Padding="10"
+                            FontWeight="Bold"
+                            FontSize="14"
+                            Cursor="Hand"/>
+
+                    <Button Grid.Column="1"
+                            Content="キャンセル"
+                            Command="{Binding CancelCommand}"
+                            IsEnabled="{Binding IsProcessing}"
+                            Padding="10,10"
+                            Margin="4,0,0,0"
+                            Cursor="Hand"/>
+                </Grid>
+
+                <!-- ステータスメッセージ -->
+                <TextBlock Text="{Binding StatusMessage}"
+                           Foreground="DarkGray"
+                           TextWrapping="Wrap"
+                           HorizontalAlignment="Center"
+                           FontSize="11"
+                           Margin="0,8,0,0"/>
+            </StackPanel>
+        </Border>
+
+    </Grid>
+</UserControl>

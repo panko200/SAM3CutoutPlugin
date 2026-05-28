@@ -1,0 +1,11 @@
+{
+  "profiles": {
+    "SAM3CutoutPlugin": {
+      "commandName": "Project"
+    },
+    "プロファイル 1": {
+      "commandName": "Executable",
+      "executablePath": "C:\\Users\\masafumi\\Downloads\\YukkuriMovieMaker_v4.47.0.5_Lite\\YukkuriMovieMaker.exe"
+    }
+  }
+}

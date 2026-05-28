@@ -1,0 +1,58 @@
+<Window x:Class="SAM3CutoutPlugin.SAM3ImageClickWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="SAM3 - 被写体をクリックして選択" Height="600" Width="800" WindowStartupLocation="CenterOwner">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <StackPanel Grid.Row="0" Margin="10">
+            <TextBlock TextWrapping="Wrap" Margin="0,0,0,5">
+                【ポイントモード】切り抜きたい対象を左クリック（青）、除外部分を右クリック（赤）します。
+                【ボックスモード】ドラッグ＆ドロップで対象のバウンディングボックス（矩形）を指定します。
+            </TextBlock>
+            <Grid Margin="0,5,0,0">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                
+                <!-- 1行目: モードとテキストプロンプト -->
+                <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,5">
+                    <TextBlock Text="モード:" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                    <RadioButton x:Name="PointModeRadioButton" Content="ポイント" IsChecked="True" VerticalAlignment="Center" Margin="0,0,10,0" Checked="Mode_Checked"/>
+                    <RadioButton x:Name="BoxModeRadioButton" Content="ボックス" VerticalAlignment="Center" Margin="0,0,15,0" Checked="Mode_Checked"/>
+                    <TextBlock Text="テキストプロンプト:" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                    <TextBox x:Name="PromptTextBox" Width="300" VerticalAlignment="Center" Padding="2" TextChanged="PromptTextBox_TextChanged"/>
+                </StackPanel>
+                
+                <!-- 2行目: 検出モードとアクション -->
+                <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,5,0,0">
+                    <TextBlock Text="テキスト検出モード:" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                    <RadioButton x:Name="MatchAllRadioButton" Content="合うもの全て切り抜き" IsChecked="True" VerticalAlignment="Center" Margin="0,0,15,0"/>
+                    <RadioButton x:Name="MatchBestRadioButton" Content="最も合うものを切り抜き" VerticalAlignment="Center" Margin="0,0,20,0"/>
+                    <Button x:Name="PreviewButton" Content="プレビュー更新" Width="100" Margin="10,0,0,0" Click="PreviewButton_Click"/>
+                    <TextBlock x:Name="PreviewStatusText" Text="" Margin="10,0,0,0" VerticalAlignment="Center" Foreground="Blue"/>
+                </StackPanel>
+            </Grid>
+        </StackPanel>
+
+        <!-- 画像表示エリア（Viewboxでスケーリングを管理） -->
+        <Viewbox Grid.Row="1" Margin="10" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center">
+            <Grid x:Name="ImageContainer" Background="Black" MouseLeftButtonDown="Image_MouseLeftButtonDown" MouseRightButtonDown="Image_MouseRightButtonDown" MouseMove="ImageContainer_MouseMove" MouseLeftButtonUp="ImageContainer_MouseLeftButtonUp">
+                <Image x:Name="PreviewImage" Stretch="None" />
+                <Image x:Name="MaskOverlayImage" Stretch="None" IsHitTestVisible="False" />
+                <Canvas x:Name="MarkerCanvas" IsHitTestVisible="False" />
+            </Grid>
+        </Viewbox>
+
+        <!-- コントロールボタン -->
+        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="10">
+            <Button Content="クリア" Width="100" Margin="0,0,10,0" Click="ClearButton_Click"/>
+            <Button Content="このポイントで切り抜き開始" Width="180" Click="RunButton_Click" FontWeight="Bold"/>
+        </StackPanel>
+    </Grid>
+</Window>

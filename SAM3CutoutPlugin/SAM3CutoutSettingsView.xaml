@@ -1,0 +1,19 @@
+<UserControl x:Class="SAM3CutoutPlugin.SAM3CutoutSettingsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:SAM3CutoutPlugin"
+             Padding="8">
+    <StackPanel>
+        <!-- トークン設定 -->
+        <TextBlock Text="Hugging Face トークン (必須):" FontWeight="Bold" Margin="0,0,0,4"/>
+        <TextBox Text="{Binding Source={x:Static local:SAM3CutoutSettings.Default}, Path=HuggingFaceToken, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,4" />
+        <TextBlock Text="※SAM3モデルのダウンロードに使用します。Hugging Faceでアカウント登録し、トークンを取得してください。" 
+                   FontSize="11" Foreground="Gray" TextWrapping="Wrap" Margin="0,0,0,16"/>
+
+        <!-- Python環境構築 -->
+        <TextBlock Text="Python環境の構築:" FontWeight="Bold" Margin="0,0,0,4"/>
+        <Button x:Name="SetupButton" Content="環境を構築・更新する" Padding="8,4" Click="SetupButton_Click"/>
+        <TextBlock x:Name="SetupProgressText" Text="未構築（実行ボタンを押すか、ここで構築してください）" Margin="0,4,0,4" Foreground="Blue"/>
+        <ProgressBar x:Name="SetupProgressBar" Height="10" Minimum="0" Maximum="1" Margin="0,0,0,16"/>
+    </StackPanel>
+</UserControl>
