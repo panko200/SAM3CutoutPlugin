@@ -23,9 +23,9 @@ YukkuriMovieMaker4 にて動作するプラグインです。
 
 詳細な導入・解説につきましては、以下のサイト・動画で解説しています。是非ご参照ください。
 
-- [Note](dammy)
-- [Youtube](dammy)
-- [niconico](dammy)
+- [Note](https://note.com/panko201/n/n6176c232c238)
+- [Youtube](https://youtu.be/VqifKbK_4pE)
+- [niconico](https://www.nicovideo.jp/watch/sm46386935)
 
 # 使用方法
 
