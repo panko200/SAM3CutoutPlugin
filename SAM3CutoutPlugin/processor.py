@@ -1129,8 +1129,22 @@ def main():
         ).to(device).eval()
         processor = Sam3TrackerVideoProcessor.from_pretrained("facebook/sam3")
 
-        # ★ 入力ファイルが画像（静止画）かどうかを拡張子で判定し分岐
-        is_image_file = video_path.lower().endswith((".png", ".jpg", ".jpeg", ".bmp", ".webp"))
+        # ★追加：汎用的な画像判定リスト（GIF, WebP, TIFFなども内包）
+        IMAGE_EXTENSIONS = (".png", ".jpg", ".jpeg", ".bmp", ".webp", ".gif", ".tiff", ".tif")
+        
+        is_image_file = False
+        is_animated_image = False
+        
+        ext = os.path.splitext(video_path)[1].lower()
+        if ext in IMAGE_EXTENSIONS:
+            try:
+                # Pillowを用いて、動的にアニメーション画像であるかを検出します
+                with Image.open(video_path) as img:
+                    is_animated_image = getattr(img, "is_animated", False) and getattr(img, "n_frames", 1) > 1
+                    is_image_file = not is_animated_image
+            except:
+                # 解析に失敗した場合は安全のため静止画扱い
+                is_image_file = True
 
         frames_pil = []
         fps = 30.0
@@ -1139,12 +1153,28 @@ def main():
 
         if is_image_file:
             try:
-                # 画像ファイルとして直接安全にロード
+                # 静止画像として直接ロード
                 orig_img = Image.open(video_path).convert("RGB")
                 width, height = orig_img.size
                 frames_pil.append(orig_img)
             except Exception as ex:
                 print(f"ERROR: Failed to open image: {ex}", flush=True)
+                sys.exit(1)
+        elif is_animated_image:
+            # ★追加：GIFやWebPなどのアニメーション画像を、PILを介して全フレーム分解ロードします
+            try:
+                with Image.open(video_path) as img:
+                    width, height = img.size
+                    duration = img.info.get("duration", 40) # 1フレーム毎のディレイ時間(ms)
+                    if duration and duration > 0:
+                        fps = 1000.0 / duration
+                    else:
+                        fps = 30.0
+                    for frame_idx in range(img.n_frames):
+                        img.seek(frame_idx)
+                        frames_pil.append(img.convert("RGB"))
+            except Exception as ex:
+                print(f"ERROR: Failed to open animated image: {ex}", flush=True)
                 sys.exit(1)
         else:
             # 動画ファイルとしてデコードロード

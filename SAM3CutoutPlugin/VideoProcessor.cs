@@ -241,12 +241,6 @@ internal class VideoProcessor
         return null;
     }
 
-    private static string ReturnAndLog(string path)
-    {
-        Debug.WriteLine($"ffmpeg found: {path}");
-        return path;
-    }
-
     private static string? SearchFileRecursive(string dir, string fileName, int maxDepth)
     {
         if (maxDepth < 0) return null;

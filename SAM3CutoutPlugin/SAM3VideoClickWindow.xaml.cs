@@ -63,6 +63,9 @@ public partial class SAM3VideoClickWindow : Window
     // スライダーシークのキャンセル用
     private CancellationTokenSource? _sliderCts;
 
+    // プレビュー更新のキャンセル用
+    private CancellationTokenSource? _previewCts;
+
     // マスクおよびポイントを描画する「6色周期カラーテーブル」
     private static readonly Color[] ObjectColors = new Color[]
     {
@@ -122,7 +125,7 @@ public partial class SAM3VideoClickWindow : Window
     private static BitmapImage LoadBitmapFromBase64(string b64)
     {
         byte[] bytes = Convert.FromBase64String(b64);
-        var ms = new MemoryStream(bytes);
+        using var ms = new MemoryStream(bytes);
         var bitmap = new BitmapImage();
         bitmap.BeginInit();
         bitmap.CacheOption = BitmapCacheOption.OnLoad;
@@ -286,24 +289,19 @@ public partial class SAM3VideoClickWindow : Window
                 string b64Frame = root.GetProperty("frame").GetString() ?? "";
                 string b64Mask = root.GetProperty("mask").GetString() ?? "";
 
-                Dispatcher.Invoke(() =>
-                {
-                    if (!string.IsNullOrEmpty(b64Frame))
-                    {
-                        PreviewImage.Source = LoadBitmapFromBase64(b64Frame);
-                    }
+                if (!string.IsNullOrEmpty(b64Frame))
+                    PreviewImage.Source = LoadBitmapFromBase64(b64Frame);
 
-                    if (b64Mask == "NONE")
-                    {
-                        MaskOverlayImage.Source = null;
-                        PreviewStatusText.Text = $"フレーム {_currentPreviewFrame} 表示中 (プレビュー未生成)";
-                    }
-                    else if (!string.IsNullOrEmpty(b64Mask))
-                    {
-                        MaskOverlayImage.Source = LoadBitmapFromBase64(b64Mask);
-                        PreviewStatusText.Text = $"フレーム {_currentPreviewFrame} 表示中 (プレビューあり)";
-                    }
-                });
+                if (b64Mask == "NONE")
+                {
+                    MaskOverlayImage.Source = null;
+                    PreviewStatusText.Text = $"フレーム {_currentPreviewFrame} 表示中 (プレビュー未生成)";
+                }
+                else if (!string.IsNullOrEmpty(b64Mask))
+                {
+                    MaskOverlayImage.Source = LoadBitmapFromBase64(b64Mask);
+                    PreviewStatusText.Text = $"フレーム {_currentPreviewFrame} 表示中 (プレビューあり)";
+                }
             }
         }
         catch (OperationCanceledException) { }
@@ -315,10 +313,14 @@ public partial class SAM3VideoClickWindow : Window
 
     private async void PreviewButton_Click(object sender, RoutedEventArgs e)
     {
+        _previewCts?.Cancel();
+        _previewCts = new CancellationTokenSource();
+        var ct = _previewCts.Token;
+
         PreviewButton.IsEnabled = false;
         try
         {
-            await UpdatePreviewAsync(CancellationToken.None);
+            await UpdatePreviewAsync(ct);
         }
         finally
         {
@@ -358,26 +360,17 @@ public partial class SAM3VideoClickWindow : Window
                 string b64Frame = root.GetProperty("frame").GetString() ?? "";
                 string b64Mask = root.GetProperty("mask").GetString() ?? "";
 
-                Dispatcher.Invoke(() =>
-                {
-                    if (!string.IsNullOrEmpty(b64Frame))
-                    {
-                        PreviewImage.Source = LoadBitmapFromBase64(b64Frame);
-                    }
-                    if (!string.IsNullOrEmpty(b64Mask))
-                    {
-                        MaskOverlayImage.Source = LoadBitmapFromBase64(b64Mask);
-                    }
-                    PreviewStatusText.Text = $"フレーム {_currentPreviewFrame} プレビュー完了";
-                });
+                if (!string.IsNullOrEmpty(b64Frame))
+                    PreviewImage.Source = LoadBitmapFromBase64(b64Frame);
+                if (!string.IsNullOrEmpty(b64Mask))
+                    MaskOverlayImage.Source = LoadBitmapFromBase64(b64Mask);
+                PreviewStatusText.Text = $"フレーム {_currentPreviewFrame} プレビュー完了";
             }
         }
         catch (OperationCanceledException) { }
         catch (Exception ex)
         {
-            Dispatcher.Invoke(() => {
-                PreviewStatusText.Text = "エラー発生";
-            });
+            PreviewStatusText.Text = "エラー発生";
             System.Diagnostics.Debug.WriteLine($"Preview error: {ex.Message}");
         }
     }
@@ -544,7 +537,9 @@ public partial class SAM3VideoClickWindow : Window
         RedrawMarkers();
 
         // 削除に伴い、プレビュー上の半透明マスクも自動でリロード
-        await UpdatePreviewAsync(CancellationToken.None);
+        _previewCts?.Cancel();
+        _previewCts = new CancellationTokenSource();
+        await UpdatePreviewAsync(_previewCts.Token);
     }
 
     private void ObjectComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)

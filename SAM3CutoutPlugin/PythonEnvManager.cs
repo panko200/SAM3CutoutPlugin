@@ -303,21 +303,25 @@ internal static class PythonEnvManager
         }
     }
 
-    public static void StopServer()
+    public static async Task StopServerAsync()
     {
-        if (_serverProcess != null && !_serverProcess.HasExited)
+        var proc = _serverProcess;
+        if (proc != null && !proc.HasExited)
         {
             try
             {
                 _serverInput?.WriteLine("{\"action\":\"exit\"}");
                 _serverInput?.Flush();
-                _serverProcess.WaitForExit(1000);
-                if (!_serverProcess.HasExited)
-                    _serverProcess.Kill();
+                // 1秒以内に終了しなければ強制Kill（UIスレッドをブロックしない）
+                using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(1));
+                try { await proc.WaitForExitAsync(cts.Token); }
+                catch (OperationCanceledException) { /* タイムアウト */ }
+                if (!proc.HasExited)
+                    proc.Kill();
             }
             catch { }
         }
-        _serverProcess?.Dispose();
+        proc?.Dispose();
         _serverProcess = null;
         _serverInput = null;
         _serverOutput = null;

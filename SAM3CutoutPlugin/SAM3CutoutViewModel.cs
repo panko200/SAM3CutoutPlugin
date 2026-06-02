@@ -26,6 +26,9 @@ internal class SAM3CutoutViewModel : INotifyPropertyChanged, ITimelineToolViewMo
     private UndoRedoManager? _undoRedoManager;
     private CancellationTokenSource? _cts;
 
+    // 判別対象とする主要な画像拡張子リスト
+    private static readonly string[] ImageExtensions = { ".png", ".jpg", ".jpeg", ".bmp", ".webp", ".gif" };
+
     // ============================================
     // プロパティ (SAM3CutoutSettingsと連携して保存)
     // ============================================
@@ -228,7 +231,7 @@ internal class SAM3CutoutViewModel : INotifyPropertyChanged, ITimelineToolViewMo
             }
 
             // ---- Step 1: 入力ファイルパスの取得 ----
-            string inputPath = ResolveInputPath();
+            string inputPath = ResolveInputPath(quiet: false);
             if (string.IsNullOrEmpty(inputPath) || !File.Exists(inputPath))
             {
                 StatusMessage = "入力ファイルが見つかりません。";
@@ -435,6 +438,7 @@ internal class SAM3CutoutViewModel : INotifyPropertyChanged, ITimelineToolViewMo
             // 出力結果の解析
             string outputPath = "";
             bool isVideo = false;
+            bool isFramesDir = false;
             foreach (var line in pythonOutput.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries))
             {
                 if (line.StartsWith("OUTPUT_VIDEO:"))
@@ -447,11 +451,27 @@ internal class SAM3CutoutViewModel : INotifyPropertyChanged, ITimelineToolViewMo
                     outputPath = line.Substring("OUTPUT_IMAGE:".Length).Trim();
                     isVideo = false;
                 }
+                else if (line.StartsWith("OUTPUT_FRAMES_DIR:"))
+                {
+                    outputPath = line.Substring("OUTPUT_FRAMES_DIR:".Length).Trim();
+                    isVideo = false;
+                    isFramesDir = true;
+                }
             }
 
-            if (string.IsNullOrEmpty(outputPath) || !File.Exists(outputPath))
+            bool outputExists = !string.IsNullOrEmpty(outputPath) &&
+                (isFramesDir ? Directory.Exists(outputPath) : File.Exists(outputPath));
+            if (!outputExists)
             {
                 throw new Exception("出力ファイルの生成に失敗しました。\n" + pythonOutput);
+            }
+
+            // フレームディレクトリ出力はタイムライン追加非対応（ユーザーに通知して終了）
+            if (isFramesDir)
+            {
+                ProgressValue = 1.0;
+                StatusMessage = $"完了！フレームを出力しました: {outputPath}";
+                return;
             }
 
             // タイムラインに追加 (元の選択クリップ情報を一緒に渡す)
@@ -473,7 +493,7 @@ internal class SAM3CutoutViewModel : INotifyPropertyChanged, ITimelineToolViewMo
         }
         finally
         {
-            PythonEnvManager.StopServer();
+            await PythonEnvManager.StopServerAsync();
             IsProcessing = false;
             _cts?.Dispose();
             _cts = null;
@@ -507,55 +527,124 @@ internal class SAM3CutoutViewModel : INotifyPropertyChanged, ITimelineToolViewMo
         }, ct);
     }
 
+    // ★追加：WebPファイル用のアニメーション検知ヘルパー（バイナリ走査）
+    private static bool IsAnimatedWebp(string path)
+    {
+        try
+        {
+            using (var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read))
+            {
+                if (fs.Length < 100) return false;
+                byte[] buffer = new byte[1024];
+                int bytesRead = fs.Read(buffer, 0, buffer.Length);
+                string text = System.Text.Encoding.ASCII.GetString(buffer, 0, bytesRead);
+                return text.Contains("ANIM") || text.Contains("ANMF");
+            }
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    // ★追加：画像ファイルのアニメーション構造検知用ヘルパー
+    private static bool IsAnimatedImage(string path)
+    {
+        try
+        {
+            string ext = Path.GetExtension(path).ToLower();
+            if (ext == ".webp")
+            {
+                return IsAnimatedWebp(path);
+            }
+            if (ext == ".gif")
+            {
+                // GIFはWPFの標準BitmapDecoderを用いてフレーム数を取得することでアニメーション判定可能
+                using (var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read))
+                {
+                    var decoder = BitmapDecoder.Create(fs, BitmapCreateOptions.DelayCreation, BitmapCacheOption.None);
+                    return decoder.Frames.Count > 1;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Failed to analyze animated image: {ex.Message}");
+        }
+        return false; // PNG, JPG, BMP などの標準画像は静止画として判定
+    }
+
     // ============================================
     // 入力パスの解決
     // ============================================
 
-    private string ResolveInputPath()
+    private string ResolveInputPath(bool quiet = false)
     {
+        string path = "";
         if (!UseSelectedItem)
-            return InputFilePath;
-
-        if (_timeline == null) return "";
-
-        try
         {
-            var selectedProp = _timeline.GetType().GetProperty("SelectedItem",
-                BindingFlags.Public | BindingFlags.Instance);
-            if (selectedProp == null) return "";
+            path = InputFilePath;
+        }
+        else
+        {
+            if (_timeline == null) return "";
 
-            var selectedItem = selectedProp.GetValue(_timeline);
-            if (selectedItem == null)
+            try
             {
-                StatusMessage = "タイムラインでアイテムが選択されていません。";
-                return "";
-            }
+                var selectedProp = _timeline.GetType().GetProperty("SelectedItem",
+                    BindingFlags.Public | BindingFlags.Instance);
+                if (selectedProp == null) return "";
 
-            var filePathProp = selectedItem.GetType().GetProperty("FilePath",
-                BindingFlags.Public | BindingFlags.Instance);
-            if (filePathProp != null)
-            {
-                string? path = filePathProp.GetValue(selectedItem) as string;
-                if (!string.IsNullOrEmpty(path))
+                var selectedItem = selectedProp.GetValue(_timeline);
+                if (selectedItem == null)
                 {
-                    if (selectedItem is ImageItem)
-                        IsImageMode = true;
-                    else if (selectedItem is VideoItem)
-                        IsVideoMode = true;
+                    if (!quiet) StatusMessage = "タイムラインでアイテムが選択されていません。";
+                    return "";
+                }
 
-                    return path;
+                var filePathProp = selectedItem.GetType().GetProperty("FilePath",
+                    BindingFlags.Public | BindingFlags.Instance);
+                if (filePathProp != null)
+                {
+                    path = filePathProp.GetValue(selectedItem) as string ?? "";
+                }
+                else
+                {
+                    if (!quiet) StatusMessage = "選択中のアイテムにファイルパスがありません。";
+                    return "";
                 }
             }
-
-            StatusMessage = "選択中のアイテムにファイルパスがありません。";
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Selected item retrieval failed: {ex.Message}");
+                if (!quiet) StatusMessage = "選択中アイテムの取得に失敗しました。ファイル指定モードをお使いください。";
+                return "";
+            }
         }
-        catch (Exception ex)
+
+        // ★ 拡張子および画像のアニメーション構造を検知して動作モードを自動設定
+        if (!string.IsNullOrEmpty(path) && File.Exists(path))
         {
-            Debug.WriteLine($"Selected item retrieval failed: {ex.Message}");
-            StatusMessage = "選択中アイテムの取得に失敗しました。ファイル指定モードをお使いください。";
+            string ext = Path.GetExtension(path).ToLower();
+            if (ImageExtensions.Contains(ext))
+            {
+                // アニメーション画像（GIFやWebP等）は動画モード、1Fのみなら静止画モードへ自動割り当て！
+                if (IsAnimatedImage(path))
+                {
+                    IsVideoMode = true;
+                }
+                else
+                {
+                    IsImageMode = true;
+                }
+            }
+            else
+            {
+                IsVideoMode = true;
+            }
         }
 
-        return "";
+        return path;
     }
 
     private IItem? GetSelectedItem()
@@ -733,7 +822,7 @@ internal class SAM3CutoutViewModel : INotifyPropertyChanged, ITimelineToolViewMo
     private static BitmapImage LoadBitmapFromBase64(string b64)
     {
         byte[] bytes = Convert.FromBase64String(b64);
-        var ms = new MemoryStream(bytes);
+        using var ms = new MemoryStream(bytes);
         var bitmap = new BitmapImage();
         bitmap.BeginInit();
         bitmap.CacheOption = BitmapCacheOption.OnLoad;
@@ -751,6 +840,13 @@ internal class SAM3CutoutViewModel : INotifyPropertyChanged, ITimelineToolViewMo
     {
         _timeline = info.Timeline;
         _undoRedoManager = info.UndoRedoManager;
+
+        // ★ 初期読み込み時に、現在選択されているアイテムのモード（画像・映像）を自動検知（静かに実行）
+        try
+        {
+            ResolveInputPath(quiet: true);
+        }
+        catch { }
     }
 
     // ============================================
