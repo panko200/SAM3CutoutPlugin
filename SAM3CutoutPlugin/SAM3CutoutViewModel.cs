@@ -99,6 +99,29 @@ internal class SAM3CutoutViewModel : INotifyPropertyChanged, ITimelineToolViewMo
         }
     }
 
+    // 0=自動, 1=チャンク, 2=従来 の Index と 設定の Enum を相互変換して保存
+    public int ProcessModeIndex
+    {
+        get => (int)SAM3CutoutSettings.Default.ProcessingMode;
+        set
+        {
+            var target = (ProcessingMode)value;
+            if (SAM3CutoutSettings.Default.ProcessingMode != target)
+            {
+                SAM3CutoutSettings.Default.ProcessingMode = target;
+                OnPropertyChanged(nameof(ProcessModeIndex));
+            }
+        }
+    }
+
+    // Pythonへ渡す処理方式文字列
+    private string ProcessingModeArg => SAM3CutoutSettings.Default.ProcessingMode switch
+    {
+        ProcessingMode.Chunk => "chunk",
+        ProcessingMode.Legacy => "legacy",
+        _ => "auto"
+    };
+
     public string OutputFolder
     {
         get => SAM3CutoutSettings.Default.OutputFolder;
@@ -314,7 +337,7 @@ internal class SAM3CutoutViewModel : INotifyPropertyChanged, ITimelineToolViewMo
             StatusMessage = "SAM3モデルをロード中... (初回起動時は数秒～十数秒かかります)";
             try
             {
-                await PythonEnvManager.StartServerAsync(scriptPath, inputPath, settings.HuggingFaceToken, this.DeviceIndex, startSec, endSec, _cts.Token);
+                await PythonEnvManager.StartServerAsync(scriptPath, inputPath, settings.HuggingFaceToken, this.DeviceIndex, startSec, endSec, this.ProcessingModeArg, _cts.Token);
             }
             catch (Exception ex)
             {

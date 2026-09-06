@@ -15,6 +15,19 @@ public enum InferenceDevice
 }
 
 /// <summary>
+/// 動画の処理方式（メモリ使用量とトレードオフ）
+/// </summary>
+public enum ProcessingMode
+{
+    /// <summary>自動：短い動画は従来方式（従来と同一結果）、長い動画はチャンク方式（省メモリ）に自動切替</summary>
+    Auto = 0,
+    /// <summary>常にチャンク方式（省メモリ・長尺動画向け）</summary>
+    Chunk = 1,
+    /// <summary>常に従来方式（全フレームをRAMに保持し一括処理。短い動画向け）</summary>
+    Legacy = 2,
+}
+
+/// <summary>
 /// 動画出力形式設定
 /// </summary>
 public enum OutputFormat
@@ -62,6 +75,11 @@ internal class SAM3CutoutSettings : SettingsBase<SAM3CutoutSettings>
     private InferenceDevice inferenceDevice = InferenceDevice.CPU;
     [DataMember]
     public InferenceDevice InferenceDevice { get => inferenceDevice; set => Set(ref inferenceDevice, value); }
+
+    // 動画処理方式（自動/チャンク/従来）
+    private ProcessingMode processingMode = ProcessingMode.Auto;
+    [DataMember]
+    public ProcessingMode ProcessingMode { get => processingMode; set => Set(ref processingMode, value); }
 
     // Hugging Face トークン
     private string huggingFaceToken = "";

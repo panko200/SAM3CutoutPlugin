@@ -67,6 +67,20 @@
                     <ComboBoxItem Content="CPU（安定・低速）"/>
                 </ComboBox>
 
+                <!-- ===== 処理方式 ===== -->
+                <TextBlock Text="■ 動画の処理方式" FontWeight="Bold" FontSize="13" Margin="0,4,0,4"
+                           Visibility="{Binding IsVideoMode, Converter={StaticResource BoolToVisConverter}}"/>
+                <TextBlock Text="「自動」では長い動画だけが省メモリのチャンク方式になり、短い動画は従来方式（同一結果）で動作します。チャンク方式は結果が従来と微妙に異なる可能性があります。"
+                           Foreground="Gray" FontSize="11" TextWrapping="Wrap" Margin="4,0,4,4"
+                           Visibility="{Binding IsVideoMode, Converter={StaticResource BoolToVisConverter}}"/>
+                <ComboBox SelectedIndex="{Binding ProcessModeIndex}"
+                          Margin="4,0,4,8" Padding="4,3"
+                          Visibility="{Binding IsVideoMode, Converter={StaticResource BoolToVisConverter}}">
+                    <ComboBoxItem Content="自動（推奨）：短い動画=従来、長い動画=チャンク"/>
+                    <ComboBoxItem Content="チャンク（省メモリ・長尺動画向け）"/>
+                    <ComboBoxItem Content="従来（全フレーム一括・RAMを多く使う）"/>
+                </ComboBox>
+
                 <!-- ===== 動画出力形式 (映像モード時に表示) ===== -->
                 <TextBlock Text="■ 動画出力形式" FontWeight="Bold" FontSize="13" Margin="0,4,0,4"
                            Visibility="{Binding IsVideoMode, Converter={StaticResource BoolToVisConverter}}"/>

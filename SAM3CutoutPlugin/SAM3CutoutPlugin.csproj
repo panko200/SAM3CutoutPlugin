@@ -51,8 +51,8 @@
     </Reference>
   </ItemGroup>
 
-  <!-- ビルド後に YMM4 のプラグインフォルダへコピー -->
-  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
+  <!-- ビルド後に YMM4 のプラグインフォルダへコピー（-p:SkipSAM3PostBuild=true で無効化可） -->
+  <Target Name="PostBuild" AfterTargets="PostBuildEvent" Condition="'$(SkipSAM3PostBuild)' != 'true'">
     <Exec Command="mkdir &quot;$(YMM4DirPath)user\plugin\$(ProjectName)&quot; &gt; NUL 2&gt;&amp;1&#xD;&#xA;copy &quot;$(TargetPath)&quot; &quot;$(YMM4DirPath)user\plugin\$(ProjectName)\&quot;&#xD;&#xA;copy &quot;$(ProjectDir)processor.py&quot; &quot;$(YMM4DirPath)user\plugin\$(ProjectName)\&quot; 2&gt;NUL" />
   </Target>
 

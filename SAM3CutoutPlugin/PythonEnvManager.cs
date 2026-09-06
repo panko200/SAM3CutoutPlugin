@@ -147,14 +147,14 @@ internal static class PythonEnvManager
         return stdout;
     }
 
-    public static async Task StartServerAsync(string scriptPath, string videoPath, string token, int deviceIndex, double startSec, double endSec, CancellationToken ct)
+    public static async Task StartServerAsync(string scriptPath, string videoPath, string token, int deviceIndex, double startSec, double endSec, string processingMode = "auto", CancellationToken ct = default)
     {
         if (_serverProcess != null && !_serverProcess.HasExited)
             return;
 
         _serverProcess = new Process();
         _serverProcess.StartInfo.FileName = UvExePath;
-        _serverProcess.StartInfo.Arguments = $"run \"{scriptPath}\" server \"{videoPath}\" \"{token}\" \"{deviceIndex}\" \"{startSec}\" \"{endSec}\"";
+        _serverProcess.StartInfo.Arguments = $"run \"{scriptPath}\" server \"{videoPath}\" \"{token}\" \"{deviceIndex}\" \"{startSec}\" \"{endSec}\" \"{processingMode}\"";
         _serverProcess.StartInfo.WorkingDirectory = PythonDir;
         _serverProcess.StartInfo.UseShellExecute = false;
         _serverProcess.StartInfo.CreateNoWindow = true;
